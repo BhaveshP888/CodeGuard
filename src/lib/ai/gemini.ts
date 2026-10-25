@@ -1,7 +1,21 @@
+import { GoogleGenAI } from '@google/genai';
 import { google } from '@ai-sdk/google';
 import { z } from 'zod';
 
-export const reviewModel = google('gemini-2.5-flash');
+/**
+ * Official Google GenAI SDK v2 client.
+ * Configured per the gemini-api-dev specifications.
+ */
+export const genAI = new GoogleGenAI({
+  apiKey: process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY,
+});
+
+/**
+ * Current primary model for CodeGuard AI code audit:
+ * gemini-3.8-flash (1M tokens context, fast, balanced performance for agentic and coding tasks)
+ * Note: gemini-2.5, gemini-2.0, and gemini-1.5 models are deprecated.
+ */
+export const reviewModel = google('gemini-3.8-flash');
 
 export const ReviewFindingSchema = z.object({
   filePath: z.string().describe('Relative file path matching the diff'),
@@ -25,3 +39,15 @@ export const ReviewReportSchema = z.object({
 
 export type ReviewFinding = z.infer<typeof ReviewFindingSchema>;
 export type ReviewReport = z.infer<typeof ReviewReportSchema>;
+
+/**
+ * Direct call using the official @google/genai SDK Interactions API
+ */
+export async function auditWithGeminiInteraction(prompt: string): Promise<string | null> {
+  const interaction = await genAI.interactions.create({
+    model: 'gemini-3.8-flash',
+    input: prompt,
+  });
+
+  return interaction.output_text ?? null;
+}

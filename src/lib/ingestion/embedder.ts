@@ -1,10 +1,15 @@
+import { genAI } from '../ai/gemini';
 import { google } from '@ai-sdk/google';
 import { embed, embedMany } from 'ai';
 
-export const embeddingModel = google.textEmbeddingModel('text-embedding-004');
+/**
+ * Current text embedding model:
+ * gemini-embedding-001 (Recommended dimension: 768)
+ */
+export const EMBEDDING_MODEL_NAME = 'gemini-embedding-001';
 
 /**
- * Generates a 768-dimension embedding vector for a single string.
+ * Generates a 768-dimension embedding vector for a single string using @google/genai.
  */
 export async function generateEmbedding(text: string): Promise<number[]> {
   const cleanText = text.trim();
@@ -12,8 +17,23 @@ export async function generateEmbedding(text: string): Promise<number[]> {
     throw new Error('Cannot embed empty text');
   }
 
+  try {
+    // 1. Primary: Use official @google/genai SDK
+    const response = await genAI.models.embedContent({
+      model: EMBEDDING_MODEL_NAME,
+      contents: cleanText,
+    });
+
+    if (response.embeddings?.[0]?.values) {
+      return response.embeddings[0].values;
+    }
+  } catch (err) {
+    console.warn(`@google/genai embedContent fallback to Vercel AI SDK:`, err);
+  }
+
+  // 2. Fallback via Vercel AI SDK
   const { embedding } = await embed({
-    model: embeddingModel,
+    model: google.textEmbeddingModel('text-embedding-004'),
     value: cleanText,
   });
 
@@ -29,10 +49,12 @@ export async function generateBatchEmbeddings(texts: string[]): Promise<number[]
     return [];
   }
 
-  const { embeddings } = await embedMany({
-    model: embeddingModel,
-    values: filtered,
-  });
+  const results: number[][] = [];
 
-  return embeddings;
+  for (const text of filtered) {
+    const vector = await generateEmbedding(text);
+    results.push(vector);
+  }
+
+  return results;
 }

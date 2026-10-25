@@ -216,7 +216,7 @@ export default function PRReviewPage() {
               </span>
             </div>
             <p className="text-[11px] text-slate-400 mt-0.5">
-              Auditing against team guidelines via <code>pgvector</code> (Gemini 2.5 Flash)
+              Auditing against team guidelines via <code>pgvector</code> (Gemini 3.8 Flash)
             </p>
           </div>
         </div>

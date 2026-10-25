@@ -16,6 +16,7 @@
     "@ai-sdk/google": "^4.0.105",
     "@aws-sdk/client-s3": "^3.1156.0",
     "@aws-sdk/s3-request-presigner": "^3.1156.0",
+    "@google/genai": "^2.31.0",
     "@langchain/textsplitters": "^1.0.2",
     "@octokit/rest": "^22.0.1",
     "@octokit/webhooks": "^14.2.0",
