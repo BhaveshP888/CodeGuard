@@ -2,27 +2,75 @@
 
 @layer base {
   :root {
-    --background: #0b0f17;
-    --foreground: #f8fafc;
-    --card: #111827;
-    --card-foreground: #f8fafc;
-    --border: #1f2937;
-    --primary: #3b82f6;
-    --primary-foreground: #ffffff;
-    --muted: #1e293b;
-    --muted-foreground: #94a3b8;
-    --accent: #2563eb;
-    --accent-foreground: #ffffff;
-    --destructive: #ef4444;
-    --destructive-foreground: #ffffff;
-    --warning: #f59e0b;
-    --warning-foreground: #000000;
+    --bg-base: #070a10;
+    --bg-surface: #0c121d;
+    --bg-surface-raised: #111a2a;
+    --bg-surface-hover: #162237;
+    --border-subtle: #182335;
+    --border-default: #22324b;
+    --border-strong: #33496b;
+    
+    --text-primary: #f0f4fc;
+    --text-secondary: #94a7c6;
+    --text-muted: #5e7394;
+    
+    --accent-primary: #2563eb;
+    --accent-hover: #1d4ed8;
+    --accent-subtle: rgba(37, 99, 235, 0.12);
+    
+    --diff-add-bg: #062316;
+    --diff-add-text: #34d399;
+    --diff-add-gutter: #0b3d27;
+    --diff-del-bg: #2d0b0f;
+    --diff-del-text: #f87171;
+    --diff-del-gutter: #4a131a;
+
+    --sev-critical: #ef4444;
+    --sev-critical-bg: #2b0b0e;
+    --sev-high: #f59e0b;
+    --sev-high-bg: #2b1b06;
+    --sev-medium: #3b82f6;
+    --sev-medium-bg: #091c38;
+    --sev-low: #64748b;
+    --sev-low-bg: #131b26;
   }
 }
 
+/* Browser surface polish per craft floor */
+::selection {
+  background-color: rgba(37, 99, 235, 0.35);
+  color: #ffffff;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-base);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-default);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--border-strong);
+}
+
 body {
-  background-color: var(--background);
-  color: var(--foreground);
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  background-color: var(--bg-base);
+  color: var(--text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Monospace font stacks strictly for code, tokens, line numbers, and hex IDs */
+code, pre, kbd, samp, .font-mono {
+  font-family: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Consolas, 'DejaVu Sans Mono', monospace;
+  font-feature-settings: 'liga' 0, 'calt' 0;
 }

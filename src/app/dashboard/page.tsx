@@ -13,7 +13,9 @@ import {
   CheckCircle2,
   Lock,
   Loader2,
-  ShieldAlert,
+  Layers,
+  ArrowRight,
+  Database,
 } from 'lucide-react';
 import { RuleStudio } from '@/components/rules/rule-studio';
 
@@ -70,26 +72,36 @@ export default function DashboardPage() {
   const availableRepos = repositories.filter((r) => !r.isConnected);
 
   return (
-    <div className="min-h-screen bg-[#080c14] flex flex-col">
-      {/* Dashboard Header */}
-      <header className="border-b border-slate-800 bg-slate-950/80 px-8 h-16 flex items-center justify-between">
+    <div className="min-h-screen bg-[#070a10] text-[#f0f4fc] flex flex-col font-sans">
+      {/* Dashboard Top Navigation */}
+      <header className="border-b border-[#182335] bg-[#0c121d] px-8 h-15 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Link href="/" className="flex items-center gap-2">
-            <ShieldCheck className="w-6 h-6 text-blue-400" />
-            <span className="font-bold text-slate-100 tracking-tight">CodeGuard AI</span>
+          <Link href="/" className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-lg bg-blue-600/10 border border-blue-500/30 flex items-center justify-center text-blue-400">
+              <ShieldCheck className="w-4 h-4" />
+            </div>
+            <span className="font-bold text-sm tracking-tight text-[#f0f4fc]">CodeGuard AI</span>
           </Link>
-          <span className="text-slate-600">/</span>
-          <span className="text-xs text-slate-400 font-medium">Dashboard</span>
+          <span className="text-[#5e7394] font-mono">/</span>
+          <span className="text-xs text-[#94a7c6] font-medium">Dashboard</span>
         </div>
 
         <div className="flex items-center gap-3">
+          <Link
+            href="/dashboard/repos/demo/prs/1"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-[#22324b] bg-[#111a2a] text-xs text-[#94a7c6] hover:text-[#f0f4fc] transition-colors"
+          >
+            <span>Live Audit Demo</span>
+            <ExternalLink className="w-3 h-3 text-[#5e7394]" />
+          </Link>
+
           <button
             onClick={() => refetch()}
             disabled={isFetching}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-800 bg-slate-900 text-xs text-slate-300 hover:text-white transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-[#182335] bg-[#070a10] text-xs text-[#94a7c6] hover:text-[#f0f4fc] transition-colors"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${isFetching ? 'animate-spin' : ''}`} />
-            Sync Repos
+            <RefreshCw className={`w-3.5 h-3.5 ${isFetching ? 'animate-spin text-blue-400' : ''}`} />
+            Sync Repositories
           </button>
         </div>
       </header>
@@ -100,26 +112,45 @@ export default function DashboardPage() {
         <div>
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 className="text-base font-bold text-slate-100">Connected Repositories</h2>
-              <p className="text-xs text-slate-400">Repositories monitored for architectural and security compliance.</p>
+              <h2 className="text-lg font-bold text-[#f0f4fc] tracking-tight">Connected Repositories</h2>
+              <p className="text-xs text-[#94a7c6] mt-0.5">
+                Repositories actively monitored with internal rules and zero-latency secrets traps.
+              </p>
             </div>
           </div>
 
           {isLoading ? (
-            <div className="flex items-center justify-center py-20 text-slate-500 text-xs gap-2">
+            <div className="flex items-center justify-center py-24 text-[#5e7394] text-xs gap-2">
               <Loader2 className="w-4 h-4 animate-spin text-blue-400" />
               Loading repositories from GitHub...
             </div>
           ) : isError ? (
-            <div className="p-6 rounded-xl border border-red-900/40 bg-red-950/20 text-red-300 text-xs">
-              Failed to load repositories. Please ensure you are logged in with valid GitHub credentials.
+            <div className="p-6 rounded-xl border border-red-900/40 bg-[#21090d] text-red-200 text-xs">
+              <div className="font-semibold text-white">GitHub Session Inactive</div>
+              <p className="text-[#fca5a5] mt-1">
+                Log in with your GitHub credentials to connect your team repositories.
+              </p>
+              <div className="mt-4 flex items-center gap-3">
+                <Link
+                  href="/login"
+                  className="px-4 py-2 bg-red-800 hover:bg-red-700 text-white rounded text-xs font-semibold"
+                >
+                  Sign in with GitHub
+                </Link>
+                <Link
+                  href="/dashboard/repos/demo/prs/1"
+                  className="px-4 py-2 bg-[#111a2a] hover:bg-[#162237] border border-[#22324b] text-[#f0f4fc] rounded text-xs font-medium"
+                >
+                  Explore Interactive Demo Instead
+                </Link>
+              </div>
             </div>
           ) : connectedRepos.length === 0 ? (
-            <div className="p-12 text-center border border-dashed border-slate-800 rounded-2xl bg-slate-900/20">
-              <GitPullRequest className="w-8 h-8 text-slate-600 mx-auto mb-3" />
-              <h3 className="text-sm font-semibold text-slate-200">No repositories connected yet</h3>
-              <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
-                Connect a repository below to configure architectural style guides and audit Pull Requests.
+            <div className="p-12 text-center border border-[#182335] rounded-xl bg-[#0c121d]">
+              <GitPullRequest className="w-8 h-8 text-[#5e7394] mx-auto mb-3" />
+              <h3 className="text-sm font-semibold text-[#f0f4fc]">No repositories connected yet</h3>
+              <p className="text-xs text-[#94a7c6] mt-1 max-w-sm mx-auto">
+                Select any repository from the list below to enable PR architectural audits and rule ingestion.
               </p>
             </div>
           ) : (
@@ -127,31 +158,31 @@ export default function DashboardPage() {
               {connectedRepos.map((repo) => (
                 <div
                   key={repo.id}
-                  className="p-5 rounded-xl border border-slate-800 bg-slate-900/40 hover:border-slate-700 transition-all shadow-md flex flex-col justify-between"
+                  className="p-5 rounded-xl border border-[#182335] bg-[#0c121d] hover:border-[#22324b] transition-all shadow-md flex flex-col justify-between"
                 >
                   <div>
                     <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-center gap-1.5 font-semibold text-sm text-slate-100 truncate">
+                      <div className="flex items-center gap-1.5 font-semibold text-xs text-[#f0f4fc] truncate">
                         {repo.private && <Lock className="w-3.5 h-3.5 text-amber-400 shrink-0" />}
                         <span className="truncate">{repo.fullName}</span>
                       </div>
-                      <span className="px-2 py-0.5 rounded text-[10px] bg-emerald-950/80 border border-emerald-800 text-emerald-300 font-medium">
-                        Active
+                      <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-[#062316] border border-[#0b3d27] text-[#34d399] font-bold">
+                        ACTIVE
                       </span>
                     </div>
 
-                    <p className="text-xs text-slate-400 mt-2 line-clamp-2">
-                      {repo.description || 'No description provided.'}
+                    <p className="text-xs text-[#94a7c6] mt-2 line-clamp-2">
+                      {repo.description || 'Monitored repository with pgvector rule enforcement.'}
                     </p>
                   </div>
 
-                  <div className="mt-6 pt-4 border-t border-slate-800/80 flex items-center justify-between gap-2">
+                  <div className="mt-6 pt-4 border-t border-[#182335] flex items-center justify-between gap-2">
                     <button
                       onClick={() => {
                         setSelectedRepoId(repo.dbId);
                         setShowRuleStudio(true);
                       }}
-                      className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 transition-colors"
+                      className="flex items-center gap-1 text-xs text-[#60a5fa] hover:text-[#93c5fd] font-medium transition-colors"
                     >
                       <BookOpen className="w-3.5 h-3.5" />
                       Rule Studio
@@ -159,10 +190,10 @@ export default function DashboardPage() {
 
                     <Link
                       href={`/dashboard/repos/${repo.dbId}/prs/1`}
-                      className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-medium transition-colors"
+                      className="flex items-center gap-1 text-xs px-3 py-1.5 rounded-md bg-[#2563eb] hover:bg-[#1d4ed8] text-white font-medium transition-colors"
                     >
-                      Audit PR
-                      <ExternalLink className="w-3 h-3" />
+                      Audit Console
+                      <ArrowRight className="w-3 h-3" />
                     </Link>
                   </div>
                 </div>
@@ -171,40 +202,40 @@ export default function DashboardPage() {
           )}
         </div>
 
-        {/* Rule Studio Drawer Modal */}
+        {/* Rule Studio Drawer */}
         {showRuleStudio && selectedRepoId && (
-          <div className="relative">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-semibold text-slate-200">Manage Guidelines for Repository</h3>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-mono text-[#94a7c6]">Guideline Ingestion Console</span>
               <button
                 onClick={() => setShowRuleStudio(false)}
-                className="text-xs text-slate-400 hover:text-slate-200"
+                className="text-xs text-[#94a7c6] hover:text-white font-mono"
               >
-                Close Rule Studio ✕
+                Close Studio [x]
               </button>
             </div>
             <RuleStudio repositoryId={selectedRepoId} onRuleAdded={() => refetch()} />
           </div>
         )}
 
-        {/* Available to Connect Section */}
+        {/* Available GitHub Repositories Section */}
         {availableRepos.length > 0 && (
           <div>
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3">
+            <h3 className="text-[11px] font-mono uppercase tracking-wider text-[#5e7394] mb-3">
               Available GitHub Repositories ({availableRepos.length})
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {availableRepos.slice(0, 9).map((repo) => (
                 <div
                   key={repo.id}
-                  className="p-4 rounded-xl border border-slate-800/60 bg-slate-950/40 flex items-center justify-between gap-3 text-xs"
+                  className="p-3.5 rounded-lg border border-[#182335] bg-[#0c121d] flex items-center justify-between gap-3 text-xs"
                 >
                   <div className="truncate">
-                    <div className="font-medium text-slate-200 truncate flex items-center gap-1.5">
+                    <div className="font-medium text-[#f0f4fc] truncate flex items-center gap-1.5">
                       {repo.private && <Lock className="w-3 h-3 text-amber-400 shrink-0" />}
                       <span className="truncate">{repo.fullName}</span>
                     </div>
-                    <div className="text-[11px] text-slate-500 truncate mt-0.5">
+                    <div className="text-[11px] text-[#5e7394] font-mono truncate mt-0.5">
                       Branch: {repo.defaultBranch}
                     </div>
                   </div>
@@ -218,7 +249,7 @@ export default function DashboardPage() {
                       })
                     }
                     disabled={connectMutation.isPending}
-                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium shrink-0 transition-colors"
+                    className="flex items-center gap-1 px-3 py-1.5 rounded bg-[#162237] hover:bg-[#22324b] text-[#f0f4fc] font-medium shrink-0 transition-colors border border-[#22324b]"
                   >
                     <Plus className="w-3 h-3" />
                     Connect
