@@ -57,7 +57,19 @@ export async function findRelevantRules(
     LIMIT ${limit};
   `);
 
-  return results.map((row) => ({
+  const rows = (
+    Array.isArray(results)
+      ? results
+      : ((results as unknown as { rows?: unknown[] })?.rows ?? [])
+  ) as Array<{
+    id: string;
+    rule_id: string;
+    chunk_content: string;
+    metadata: string | Record<string, unknown>;
+    similarity: number;
+  }>;
+
+  return rows.map((row) => ({
     id: row.id,
     ruleId: row.rule_id,
     chunkContent: row.chunk_content,
@@ -101,7 +113,21 @@ export async function findRelevantCodeSymbols(
     LIMIT ${limit};
   `);
 
-  return results.map((row) => ({
+  const rows = (
+    Array.isArray(results)
+      ? results
+      : ((results as unknown as { rows?: unknown[] })?.rows ?? [])
+  ) as Array<{
+    id: string;
+    file_path: string;
+    symbol_name: string | null;
+    chunk_content: string;
+    start_line: number;
+    end_line: number;
+    similarity: number;
+  }>;
+
+  return rows.map((row) => ({
     id: row.id,
     filePath: row.file_path,
     symbolName: row.symbol_name,

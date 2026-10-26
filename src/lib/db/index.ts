@@ -1,28 +1,14 @@
-import { drizzle } from 'drizzle-orm/postgres-js';
-import postgres from 'postgres';
+import { drizzle } from 'drizzle-orm/neon-http';
+import { neon } from '@neondatabase/serverless';
 import * as schema from './schema';
 
-declare global {
-  // eslint-disable-next-line no-var
-  var _postgresClient: postgres.Sql | undefined;
-}
+const connectionString = process.env.DATABASE_URL || '';
 
-const connectionString = process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/codeguard_db';
+// Neon Serverless HTTP driver: optimized for Next.js serverless/edge runtimes
+// Queries run over HTTP with 0 connection setup latency and zero connection pool exhaustion.
+const sql = neon(connectionString);
 
-// Reuse connection pool during hot-reloading in development
-const client =
-  global._postgresClient ??
-  postgres(connectionString, {
-    max: process.env.NODE_ENV === 'production' ? 10 : 2,
-    idle_timeout: 20,
-    connect_timeout: 5,
-    prepare: false, // Required for transaction connection poolers like Supabase Transaction Mode / PgBouncer
-  });
-
-if (process.env.NODE_ENV !== 'production') {
-  global._postgresClient = client;
-}
-
-export const db = drizzle(client, { schema });
+export const db = drizzle(sql, { schema });
 export { schema };
 export type Database = typeof db;
+
