@@ -1,21 +1,30 @@
 import { GoogleGenAI } from '@google/genai';
-import { google } from '@ai-sdk/google';
+import { createGoogle } from '@ai-sdk/google';
 import { z } from 'zod';
+
+const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GOOGLE_API_KEY;
 
 /**
  * Official Google GenAI SDK v2 client.
- * Configured per the gemini-api-dev specifications.
  */
 export const genAI = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY,
+  apiKey,
 });
 
 /**
- * Current primary model for CodeGuard AI code audit:
- * gemini-3.8-flash (1M tokens context, fast, balanced performance for agentic and coding tasks)
- * Note: gemini-2.5, gemini-2.0, and gemini-1.5 models are deprecated.
+ * Vercel AI SDK Google provider configured with GEMINI_API_KEY.
  */
-export const reviewModel = google('gemini-3.8-flash');
+export const googleProvider = createGoogle({
+  apiKey,
+});
+
+/**
+ * Primary model for CodeGuard AI code audit per /gemini-api-dev:
+ * - gemini-3.8-flash: 1M tokens, balanced speed and agentic code reasoning
+ * - gemini-3.5-flash-lite: fastest, lowest-cost high-throughput execution fallback
+ */
+export const ACTIVE_GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
+export const reviewModel = googleProvider(ACTIVE_GEMINI_MODEL);
 
 export const ReviewFindingSchema = z.object({
   filePath: z.string().describe('Relative file path matching the diff'),

@@ -1,26 +1,23 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import {
-  ShieldCheck,
   ChevronLeft,
   Sparkles,
-  GitPullRequest,
-  CheckCircle2,
-  AlertTriangle,
   Loader2,
   GitBranch,
-  ExternalLink,
   ShieldAlert,
+  AlertCircle,
+  FileCode2,
 } from 'lucide-react';
 import { DiffViewer } from '@/components/diff-viewer/diff-viewer';
 import type { ParsedFileDiff } from '@/lib/github/diff-parser';
 import type { InlineFinding } from '@/components/diff-viewer/inline-finding-card';
 
-// Realistic multi-file pull request diff
-const REALISTIC_DIFF_FILES: ParsedFileDiff[] = [
+// Fallback demo pull request diff for interactive offline exploration
+const DEMO_DIFF_FILES: ParsedFileDiff[] = [
   {
     oldPath: 'src/lib/auth/session.ts',
     newPath: 'src/lib/auth/session.ts',
@@ -82,7 +79,7 @@ const REALISTIC_DIFF_FILES: ParsedFileDiff[] = [
   },
 ];
 
-const INITIAL_FINDINGS: InlineFinding[] = [
+const DEMO_FINDINGS: InlineFinding[] = [
   {
     id: 'finding-1',
     filePath: 'src/lib/auth/session.ts',
@@ -121,22 +118,86 @@ const INITIAL_FINDINGS: InlineFinding[] = [
   },
 ];
 
+interface PRMetadata {
+  number: number;
+  title: string;
+  author: string;
+  baseBranch: string;
+  headBranch: string;
+  state: string;
+  htmlUrl: string;
+}
+
 export default function PRReviewPage() {
   const params = useParams();
   const repoId = params.repoId as string;
   const prNumber = parseInt((params.prNumber as string) || '1', 10);
+  const isDemo = repoId === 'demo';
 
-  const [findings, setFindings] = useState<InlineFinding[]>(INITIAL_FINDINGS);
+  const [isLoading, setIsLoading] = useState(!isDemo);
+  const [error, setError] = useState<string | null>(null);
+  const [files, setFiles] = useState<ParsedFileDiff[]>(isDemo ? DEMO_DIFF_FILES : []);
+  const [findings, setFindings] = useState<InlineFinding[]>(isDemo ? DEMO_FINDINGS : []);
+  const [prMeta, setPrMeta] = useState<PRMetadata>({
+    number: prNumber,
+    title: isDemo ? 'Refactor session lifetime & user query handler' : `Pull Request #${prNumber}`,
+    author: isDemo ? 'octocat' : 'loading...',
+    baseBranch: 'main',
+    headBranch: isDemo ? 'feature/auth-hardening' : 'branch',
+    state: 'OPEN',
+    htmlUrl: '#',
+  });
   const [isAuditing, setIsAuditing] = useState(false);
-  const [riskScore, setRiskScore] = useState<number>(85);
+  const [riskScore, setRiskScore] = useState<number>(isDemo ? 85 : 0);
+
+  // Fetch real PR data and diff from API
+  const fetchPRData = useCallback(async () => {
+    if (isDemo) return;
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const res = await fetch(`/api/repos/${repoId}/prs/${prNumber}`);
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || `HTTP ${res.status}: Failed to fetch PR data`);
+      }
+
+      const data = await res.json();
+      setFiles(data.files || []);
+      setFindings(data.findings || []);
+      setRiskScore(data.riskScore ?? 0);
+      if (data.pr) {
+        setPrMeta(data.pr);
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Unknown error loading PR';
+      setError(msg);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [repoId, prNumber, isDemo]);
+
+  useEffect(() => {
+    fetchPRData();
+  }, [fetchPRData]);
 
   const criticalCount = findings.filter((f) => f.severity === 'critical' && !f.isResolved).length;
   const resolvedCount = findings.filter((f) => f.isResolved).length;
 
-  // Trigger streaming audit
+  // Trigger real AI & SAST audit
   const runLiveAudit = async () => {
     setIsAuditing(true);
     try {
+      if (isDemo) {
+        // Simulated audit delay for demo mode
+        await new Promise((r) => setTimeout(r, 1200));
+        setFindings(DEMO_FINDINGS);
+        setRiskScore(85);
+        return;
+      }
+
       const res = await fetch('/api/review/stream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -147,10 +208,25 @@ export default function PRReviewPage() {
       });
 
       if (!res.ok) {
-        console.warn('Live API response status:', res.status);
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || `Audit failed with HTTP ${res.status}`);
       }
-    } catch (err) {
-      console.error('Audit streaming error:', err);
+
+      // Read the response stream to completion
+      if (res.body) {
+        const reader = res.body.getReader();
+        while (true) {
+          const { done } = await reader.read();
+          if (done) break;
+        }
+      }
+
+      // Refresh PR findings saved to DB
+      await fetchPRData();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Audit streaming error';
+      console.error('Audit streaming error:', msg);
+      alert(`Audit failed: ${msg}`);
     } finally {
       setIsAuditing(false);
     }
@@ -162,6 +238,8 @@ export default function PRReviewPage() {
       prev.map((f) => (f.id === findingId ? { ...f, isResolved: resolved } : f))
     );
 
+    if (isDemo) return;
+
     try {
       await fetch(`/api/review/comments/${findingId}/resolve`, {
         method: 'PATCH',
@@ -169,7 +247,7 @@ export default function PRReviewPage() {
         body: JSON.stringify({ isResolved: resolved }),
       });
     } catch (err) {
-      console.warn('Could not persist resolve to DB (demo mode)');
+      console.warn('Could not persist resolve to DB', err);
     }
   };
 
@@ -177,8 +255,13 @@ export default function PRReviewPage() {
   const handleApplyFix = async (finding: InlineFinding) => {
     if (!finding.suggestedPatch) return;
 
+    if (isDemo) {
+      handleResolve(finding.id || '', true);
+      return;
+    }
+
     try {
-      await fetch('/api/review/apply-fix', {
+      const res = await fetch('/api/review/apply-fix', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -189,8 +272,14 @@ export default function PRReviewPage() {
           commitMessage: `fix(security): resolve ${finding.title}`,
         }),
       });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        alert(`Apply fix error: ${errData.error || 'Failed to commit patch'}`);
+        return;
+      }
     } catch (err) {
-      console.warn('Apply fix dispatched');
+      console.warn('Apply fix dispatched', err);
     }
 
     handleResolve(finding.id || '', true);
@@ -211,16 +300,21 @@ export default function PRReviewPage() {
           <div>
             <div className="flex items-center gap-2.5 flex-wrap">
               <span className="font-mono text-xs text-blue-400 font-bold">PR #{prNumber}</span>
-              <span className="text-xs font-bold text-[#f0f4fc]">Refactor session lifetime & user query handler</span>
-              <span className="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/30">
-                OPEN
+              <span className="text-xs font-bold text-[#f0f4fc]">{prMeta.title}</span>
+              <span className="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/30 uppercase">
+                {prMeta.state || 'OPEN'}
               </span>
+              {isDemo && (
+                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/30">
+                  DEMO MODE
+                </span>
+              )}
             </div>
 
             <div className="flex items-center gap-3 text-[11px] font-mono text-[#5e7394] mt-1">
               <span className="flex items-center gap-1 text-[#94a7c6]">
                 <GitBranch className="w-3 h-3" />
-                main ← feature/auth-hardening
+                {prMeta.baseBranch} ← {prMeta.headBranch}
               </span>
               <span>•</span>
               <span>pgvector RAG active</span>
@@ -245,7 +339,7 @@ export default function PRReviewPage() {
 
           <button
             onClick={runLiveAudit}
-            disabled={isAuditing}
+            disabled={isAuditing || isLoading}
             className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-xs font-semibold shadow-sm transition-all disabled:opacity-50"
           >
             {isAuditing ? (
@@ -253,7 +347,7 @@ export default function PRReviewPage() {
             ) : (
               <Sparkles className="w-3.5 h-3.5" />
             )}
-            {isAuditing ? 'Streaming Audit...' : 'Re-Run AI Audit'}
+            {isAuditing ? 'Auditing with Gemini...' : 'Re-Run AI Audit'}
           </button>
         </div>
       </header>
@@ -273,14 +367,60 @@ export default function PRReviewPage() {
         </div>
       )}
 
-      {/* Main Split-Screen Diff Viewer Component */}
-      <div className="flex-1 p-3 overflow-hidden">
-        <DiffViewer
-          files={REALISTIC_DIFF_FILES}
-          findings={findings}
-          onResolveFinding={handleResolve}
-          onApplyFix={handleApplyFix}
-        />
+      {/* Main Diff Content / Loading / Error states */}
+      <div className="flex-1 p-3 overflow-hidden flex flex-col">
+        {isLoading ? (
+          <div className="flex-1 flex flex-col items-center justify-center text-center p-8 text-[#5e7394]">
+            <Loader2 className="w-8 h-8 animate-spin text-blue-400 mb-3" />
+            <h3 className="text-sm font-semibold text-[#f0f4fc]">Fetching Pull Request Diff from GitHub...</h3>
+            <p className="text-xs text-[#94a7c6] mt-1 max-w-md">
+              Loading modified files and running security analysis with Gemini and pgvector guidelines.
+            </p>
+          </div>
+        ) : error ? (
+          <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
+            <div className="w-12 h-12 rounded-xl bg-red-950/40 border border-red-800/40 flex items-center justify-center text-red-400 mb-4">
+              <AlertCircle className="w-6 h-6" />
+            </div>
+            <h3 className="text-sm font-bold text-red-300">Could Not Load Pull Request</h3>
+            <p className="text-xs text-[#94a7c6] mt-1.5 max-w-md">{error}</p>
+            <div className="mt-5 flex items-center gap-3">
+              <button
+                onClick={fetchPRData}
+                className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold"
+              >
+                Retry
+              </button>
+              <Link
+                href="/dashboard"
+                className="px-4 py-2 rounded-lg border border-[#182335] bg-[#0c121d] text-[#94a7c6] hover:text-[#f0f4fc] text-xs font-medium"
+              >
+                Back to Dashboard
+              </Link>
+            </div>
+          </div>
+        ) : files.length === 0 ? (
+          <div className="flex-1 flex flex-col items-center justify-center text-center p-8 text-[#5e7394]">
+            <FileCode2 className="w-10 h-10 text-[#5e7394] mb-3" />
+            <h3 className="text-sm font-semibold text-[#f0f4fc]">No Changed Files Detected</h3>
+            <p className="text-xs text-[#94a7c6] mt-1 max-w-md">
+              This pull request currently has no file modifications or diff content available from GitHub.
+            </p>
+            <button
+              onClick={runLiveAudit}
+              className="mt-4 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold"
+            >
+              Run Audit Now
+            </button>
+          </div>
+        ) : (
+          <DiffViewer
+            files={files}
+            findings={findings}
+            onResolveFinding={handleResolve}
+            onApplyFix={handleApplyFix}
+          />
+        )}
       </div>
     </div>
   );

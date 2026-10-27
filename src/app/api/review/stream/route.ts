@@ -129,7 +129,7 @@ INSTRUCTIONS:
 4. Calculate an aggregate riskScore from 0 (pristine/safe) to 100 (critical security flaw).
     `.trim();
 
-    // 5. Stream structured object using Gemini 2.5 Flash
+    // 5. Stream structured object using Gemini 3.8 Flash
     const result = streamObject({
       model: reviewModel,
       schema: ReviewReportSchema,

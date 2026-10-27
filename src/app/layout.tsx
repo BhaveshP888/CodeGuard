@@ -5,7 +5,7 @@ import { QueryProvider } from '@/components/providers/query-provider';
 export const metadata: Metadata = {
   title: 'CodeGuard AI — Autonomous GitHub PR & Codebase Security Auditor',
   description:
-    'Free-of-cost autonomous GitHub PR & codebase security auditor powered by pgvector, Google Gemini 2.5 Flash, and Next.js 15.',
+    'Free-of-cost autonomous GitHub PR & codebase security auditor powered by pgvector, Google Gemini 3.8 Flash, and Next.js 15.',
 };
 
 export default function RootLayout({
