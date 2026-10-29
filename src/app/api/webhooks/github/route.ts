@@ -90,6 +90,7 @@ export async function POST(req: NextRequest) {
 
       const aiResponse = await generateText({
         model: reviewModel,
+        maxRetries: 1,
         system: `You are CodeGuard AI, an expert Principal Security Engineer and Software Architect.
 A developer mentioned you in a GitHub PR comment thread on PR #${prNumber} of ${repo.fullName}.
 Answer their question directly, helpfully, and concisely. If they ask for code, provide clear, copyable markdown code blocks.
@@ -225,6 +226,7 @@ INSTRUCTIONS:
     try {
       const { object } = await generateObject({
         model: reviewModel,
+        maxRetries: 1,
         schema: ReviewReportSchema,
         prompt,
       });

@@ -19,12 +19,13 @@ export const googleProvider = createGoogle({
 });
 
 /**
- * Primary model for CodeGuard AI code audit per /gemini-api-dev:
- * - gemini-3.8-flash: 1M tokens, balanced speed and agentic code reasoning
- * - gemini-3.5-flash-lite: fastest, lowest-cost high-throughput execution fallback
+ * Primary model for CodeGuard AI code audit:
+ * - gemini-2.5-flash: high-throughput, low-latency, resilient production model
+ * - gemini-3.8-flash: optional via GEMINI_MODEL env var
  */
-export const ACTIVE_GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
+export const ACTIVE_GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
 export const reviewModel = googleProvider(ACTIVE_GEMINI_MODEL);
+export const fallbackModel = googleProvider('gemini-2.5-flash');
 
 export const ReviewFindingSchema = z.object({
   filePath: z.string().describe('Relative file path matching the diff'),

@@ -130,9 +130,10 @@ INSTRUCTIONS:
 5. Generate a clean, valid Mermaid.js sequenceDiagram (starting with "sequenceDiagram\\nautonumber") illustrating the architectural call flow of the PR (e.g., Client ->> Handler ->> Service ->> DB).
     `.trim();
 
-    // 5. Stream structured object using Gemini 3.8 Flash
+    // 5. Stream structured object using Gemini Flash
     const result = streamObject({
       model: reviewModel,
+      maxRetries: 1,
       schema: ReviewReportSchema,
       prompt,
       onFinish: async ({ object }) => {

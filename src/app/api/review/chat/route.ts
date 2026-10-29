@@ -101,9 +101,10 @@ INSTRUCTIONS:
 - If asked about security, explain the impact and the cleanest idiomatic remediation.
     `.trim();
 
-    // Stream text back using Gemini 3.8 Flash
+    // Stream text back using Gemini Flash
     const result = streamText({
       model: reviewModel,
+      maxRetries: 1,
       system,
       messages: [
         ...history.map((h) => ({
