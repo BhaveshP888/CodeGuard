@@ -8,7 +8,7 @@ import { getUserOctokit } from '@/lib/github/octokit';
 import { parseUnifiedDiff } from '@/lib/github/diff-parser';
 import { scanDiffForVulnerabilities } from '@/lib/security/sast-scanner';
 import { buildPRRAGContext } from '@/lib/rag/context-builder';
-import { reviewModel, ReviewReportSchema, type ReviewFinding } from '@/lib/ai/gemini';
+import { reviewModel, chatModel, ReviewReportSchema, type ReviewFinding } from '@/lib/ai/gemini';
 import { postGitHubPRReview } from '@/lib/github/comment-poster';
 import { generateObject, generateText } from 'ai';
 import { eq } from 'drizzle-orm';
@@ -45,6 +45,7 @@ export async function POST(req: NextRequest) {
 
   // =========================================================================
   // Feature C: Interactive PR Chat via GitHub Comments (@codeguard or @codeguard-ai)
+  // Powered by Gemini 3.5 Flash for high-speed conversational responses
   // =========================================================================
   if (event === 'issue_comment' || event === 'pull_request_review_comment') {
     const commentBody = payload.comment?.body || '';
@@ -89,7 +90,7 @@ export async function POST(req: NextRequest) {
       const userPrompt = commentBody.replace(/@codeguard(-ai)?/gi, '').trim();
 
       const aiResponse = await generateText({
-        model: reviewModel,
+        model: chatModel,
         maxRetries: 1,
         system: `You are CodeGuard AI, an expert Principal Security Engineer and Software Architect.
 A developer mentioned you in a GitHub PR comment thread on PR #${prNumber} of ${repo.fullName}.
@@ -130,6 +131,7 @@ ${rawDiff}
 
   // =========================================================================
   // Standard PR Review Event
+  // Powered by Gemini 3.8 Flash (mainstay model for code reasoning and SAST audit)
   // =========================================================================
   if (event !== 'pull_request') {
     return NextResponse.json({ message: `Ignored event: ${event}` }, { status: 200 });

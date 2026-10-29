@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { db } from '@/lib/db';
-import { repositories, pullRequestReviews, reviewComments } from '@/lib/db/schema';
+import { repositories } from '@/lib/db/schema';
 import { getUserOctokit } from '@/lib/github/octokit';
-import { parseUnifiedDiff } from '@/lib/github/diff-parser';
-import { reviewModel } from '@/lib/ai/gemini';
+import { chatModel } from '@/lib/ai/gemini';
 import { streamText } from 'ai';
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { z } from 'zod';
 
 export const dynamic = 'force-dynamic';
@@ -101,9 +100,9 @@ INSTRUCTIONS:
 - If asked about security, explain the impact and the cleanest idiomatic remediation.
     `.trim();
 
-    // Stream text back using Gemini Flash
+    // Stream text back using dedicated Gemini 3.5 Flash chat model
     const result = streamText({
-      model: reviewModel,
+      model: chatModel,
       maxRetries: 1,
       system,
       messages: [

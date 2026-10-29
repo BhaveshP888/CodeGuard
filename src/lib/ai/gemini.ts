@@ -19,13 +19,20 @@ export const googleProvider = createGoogle({
 });
 
 /**
- * Primary model for CodeGuard AI code audit:
- * - gemini-2.5-flash: high-throughput, low-latency, resilient production model
- * - gemini-3.8-flash: optional via GEMINI_MODEL env var
+ * Model routing for CodeGuard AI:
+ * - gemini-3.8-flash: Mainstay model for PR code audits, SAST & guideline analysis, Mermaid sequence diagrams, and patch generation
+ * - gemini-3.5-flash: High-throughput, ultra-low latency model exclusively dedicated to interactive PR Copilot chat
+ * - gemini-3.5-flash-lite: Lightweight high-frequency fallback model
  */
-export const ACTIVE_GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
-export const reviewModel = googleProvider(ACTIVE_GEMINI_MODEL);
-export const fallbackModel = googleProvider('gemini-2.5-flash');
+export const ACTIVE_GEMINI_REVIEW_MODEL = process.env.GEMINI_REVIEW_MODEL || process.env.GEMINI_MODEL || 'gemini-3.8-flash';
+export const ACTIVE_GEMINI_CHAT_MODEL = process.env.GEMINI_CHAT_MODEL || 'gemini-3.5-flash';
+
+// Backwards compatibility alias
+export const ACTIVE_GEMINI_MODEL = ACTIVE_GEMINI_REVIEW_MODEL;
+
+export const reviewModel = googleProvider(ACTIVE_GEMINI_REVIEW_MODEL);
+export const chatModel = googleProvider(ACTIVE_GEMINI_CHAT_MODEL);
+export const fallbackModel = googleProvider('gemini-3.5-flash-lite');
 
 export const ReviewFindingSchema = z.object({
   filePath: z.string().describe('Relative file path matching the diff'),
