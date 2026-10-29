@@ -356,6 +356,7 @@ export default function PRReviewPage() {
           repositoryId: repoId,
           prNumber,
           filePath: finding.filePath,
+          lineNumber: finding.lineNumber,
           replacementContent: finding.suggestedPatch,
           commitMessage: `fix(security): resolve ${finding.title}`,
         }),
@@ -366,11 +367,12 @@ export default function PRReviewPage() {
         alert(`Apply fix error: ${errData.error || 'Failed to commit patch'}`);
         return;
       }
+
+      handleResolve(finding.id || '', true);
+      await fetchPRData();
     } catch (err) {
       console.warn('Apply fix dispatched', err);
     }
-
-    handleResolve(finding.id || '', true);
   };
 
   return (
