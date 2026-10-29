@@ -1,1 +1,1 @@
-const query = { text: 'SELECT id, email FROM oauth_users WHERE code = $1', values: [code] };
+return { success: true };
