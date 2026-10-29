@@ -124,9 +124,15 @@ export async function postGitHubPRReview(params: PostReviewParams): Promise<Post
     htmlUrl = response.data.html_url;
     commentsPostedCount = comments.slice(0, 30).length;
   } catch (reviewErr: unknown) {
-    console.warn('Batch review with inline comments failed (likely lines outside diff hunk), falling back to summary review:', reviewErr);
+    const errMsg = reviewErr instanceof Error ? reviewErr.message : '';
+    const isSelfPR = errMsg.includes('own pull request');
 
-    // Fallback: Post review without inline comments array (ensures review is never lost)
+    console.warn(
+      `Batch review failed (isSelfPR=${isSelfPR}):`,
+      errMsg
+    );
+
+    // Fallback: Retry as COMMENT if author is reviewing their own PR, or post summary
     try {
       const fallbackResponse = await octokit.rest.pulls.createReview({
         owner,
@@ -134,10 +140,14 @@ export async function postGitHubPRReview(params: PostReviewParams): Promise<Post
         pull_number: pullNumber,
         commit_id: commitSha,
         body: overallSummary,
-        event: reviewEvent,
+        event: 'COMMENT',
+        comments: isSelfPR ? comments.slice(0, 30) : undefined,
       });
       reviewId = fallbackResponse.data.id;
       htmlUrl = fallbackResponse.data.html_url;
+      if (isSelfPR) {
+        commentsPostedCount = comments.slice(0, 30).length;
+      }
     } catch (fallbackErr: unknown) {
       console.error('Fallback PR review also failed:', fallbackErr);
       // Last resort: post as PR issue comment
