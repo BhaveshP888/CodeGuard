@@ -146,6 +146,7 @@ export async function GET(
       findings,
       riskScore,
       summary: latestReview?.summary || null,
+      sequenceDiagram: latestReview?.sequenceDiagram || null,
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to fetch PR details';

@@ -127,6 +127,7 @@ INSTRUCTIONS:
 2. Flag potential security vulnerabilities: injection, broken authentication, IDOR, sensitive data leaks, SSRF, insecure direct object references, prototype pollution, improper error handling.
 3. For every issue, specify the exact filePath, the exact lineNumber in the new code, category, severity, clear message, and provide a concrete suggestedPatch.
 4. Calculate an aggregate riskScore from 0 (pristine/safe) to 100 (critical security flaw).
+5. Generate a clean, valid Mermaid.js sequenceDiagram (starting with "sequenceDiagram\\nautonumber") illustrating the architectural call flow of the PR (e.g., Client ->> Handler ->> Service ->> DB).
     `.trim();
 
     // 5. Stream structured object using Gemini 3.8 Flash
@@ -138,13 +139,14 @@ INSTRUCTIONS:
         if (!object) return;
 
         try {
-          // Update review summary & risk score
+          // Update review summary & risk score & sequence diagram
           await db
             .update(pullRequestReviews)
             .set({
               status: 'completed',
               summary: object.summary,
               riskScore: object.riskScore,
+              sequenceDiagram: object.sequenceDiagram || null,
             })
             .where(eq(pullRequestReviews.id, reviewRecord.id));
 

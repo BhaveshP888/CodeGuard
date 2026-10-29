@@ -1,271 +1,263 @@
 'use client';
 
-import React, { useState } from 'react';
-import { UploadCloud, FileText, CheckCircle2, AlertCircle, Loader2, Sparkles, BookOpen } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  ShieldCheck,
+  Sparkles,
+  Check,
+  CheckCircle2,
+  Loader2,
+  AlertCircle,
+  FileCode2,
+  RotateCcw,
+  BookOpen,
+} from 'lucide-react';
 
 interface RuleStudioProps {
   repositoryId: string;
   onRuleAdded?: () => void;
+  onClose?: () => void;
 }
 
-const RULE_PRESETS = [
+const DEFAULT_SPEC_TEMPLATE = `# Repository Security & Review Guidelines
+
+### 1. Credentials & Secrets
+- Never commit private keys, AWS access tokens, GitHub PATs, or webhook secrets.
+- Ingest all sensitive configuration at runtime exclusively via process.env or IAM instance roles.
+
+### 2. Database Queries & Injection Prevention
+- All database mutations and queries must use tagged templates (sql\`SELECT ...\`) or parameterized ORM builders.
+- Direct template literal interpolation or concatenation into raw SQL is strictly prohibited.
+- User-supplied query parameters must be validated with Zod schemas prior to query execution.
+
+### 3. Authentication & Access Control
+- Every API endpoint and Next.js Server Action must verify caller session auth as its initial operation.
+- Derive user identifiers strictly from authenticated session context to prevent Insecure Direct Object References (IDOR).
+`;
+
+const TEMPLATE_PRESETS = [
   {
-    title: 'RFC-104: Zero-Secret Ingestion Policy',
-    category: 'security' as const,
-    severity: 'critical' as const,
-    scopePattern: '**/*',
-    content: `### Zero-Secret Ingestion Policy (RFC-104)
-1. No cloud credentials, API keys, private keys, or webhook secrets may be committed directly to source control.
-2. All credentials must be ingested at runtime exclusively via process.env or cloud IAM instance roles.
-3. Detected hardcoded tokens (AKIA*, ghp_*, sk_live_*) block pull request merge automatically.`,
+    name: '+ Zero-Secret Mandate',
+    snippet: `\n### Zero-Secret Mandate (RFC-104)
+- No cloud credentials, API tokens (AKIA*, ghp_*, sk_live_*), or private keys in source code.
+- Must be loaded exclusively through environment variables.\n`,
   },
   {
-    title: 'SEC-202: Parameterized SQL & Anti-Injection Mandate',
-    category: 'security' as const,
-    severity: 'critical' as const,
-    scopePattern: 'src/lib/db/**, src/app/api/**',
-    content: `### Mandatory Parameterized SQL Queries (SEC-202)
-1. Direct concatenation or template literal interpolation into raw SQL strings is strictly prohibited.
-2. All database queries must use tagged template literals (sql\`SELECT ...\`) or ORM parameterized query builders.
-3. User-supplied query parameters must be validated with Zod schemas prior to query execution.`,
+    name: '+ SQL Injection Guard',
+    snippet: `\n### Parameterized SQL Only (SEC-202)
+- Raw SQL query string concatenation is strictly banned.
+- Use parameterized query builders or tagged sql template literals with input validation.\n`,
   },
   {
-    title: 'ARCH-305: Server Action & Auth Isolation Standard',
-    category: 'architecture' as const,
-    severity: 'high' as const,
-    scopePattern: 'src/actions/**, src/app/**',
-    content: `### Next.js 15 Server Action & Auth Isolation Standard
-1. Every Server Action must verify the caller session using await auth() as its initial line.
-2. Actions must never accept user-provided user_id in the payload; derive user_id strictly from session.user.id.
-3. Mutation results must use typed result objects { success: true, data } | { success: false, error } rather than unhandled throws.`,
+    name: '+ Server Action Auth',
+    snippet: `\n### Server Action Auth Isolation (ARCH-305)
+- All Server Actions must verify the session using \`await auth()\` before any data mutation.
+- Never accept \`user_id\` from user input payload.\n`,
   },
 ];
 
-export function RuleStudio({ repositoryId, onRuleAdded }: RuleStudioProps) {
-  const [title, setTitle] = useState('');
-  const [category, setCategory] = useState<'security' | 'architecture' | 'performance' | 'style'>('security');
-  const [severity, setSeverity] = useState<'critical' | 'high' | 'medium' | 'low'>('high');
-  const [scopePattern, setScopePattern] = useState('**/*');
-  const [content, setContent] = useState('');
-  const [file, setFile] = useState<File | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+export function RuleStudio({ repositoryId, onRuleAdded, onClose }: RuleStudioProps) {
+  const [markdown, setMarkdown] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<string | null>(null);
+  const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
-  const handleSelectPreset = (preset: typeof RULE_PRESETS[0]) => {
-    setTitle(preset.title);
-    setCategory(preset.category);
-    setSeverity(preset.severity);
-    setScopePattern(preset.scopePattern);
-    setContent(preset.content);
-    setFile(null);
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const selected = e.target.files[0];
-      setFile(selected);
-      if (!title) {
-        setTitle(selected.name.replace(/\.[^/.]+$/, ''));
+  // Load existing repository security spec
+  const fetchSpec = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const res = await fetch(`/api/rules?repositoryId=${repositoryId}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.markdownContent) {
+          setMarkdown(data.markdownContent);
+          setLastUpdated(data.lastUpdated);
+        } else {
+          // If no custom spec has been saved yet, provide the clean default template
+          setMarkdown(DEFAULT_SPEC_TEMPLATE);
+        }
       }
+    } catch {
+      setMarkdown(DEFAULT_SPEC_TEMPLATE);
+    } finally {
+      setIsLoading(false);
     }
-  };
+  }, [repositoryId]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsUploading(true);
-    setSuccessMessage(null);
-    setErrorMessage(null);
+  useEffect(() => {
+    fetchSpec();
+  }, [fetchSpec]);
+
+  const handleSave = async () => {
+    if (!markdown.trim() || isSaving) return;
+
+    setIsSaving(true);
+    setNotification(null);
 
     try {
-      let res: Response;
-
-      if (file) {
-        const formData = new FormData();
-        formData.append('repositoryId', repositoryId);
-        formData.append('title', title);
-        formData.append('category', category);
-        formData.append('severity', severity);
-        formData.append('scopePattern', scopePattern);
-        formData.append('file', file);
-
-        res = await fetch('/api/rules/upload', {
-          method: 'POST',
-          body: formData,
-        });
-      } else {
-        res = await fetch('/api/rules/upload', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            repositoryId,
-            title,
-            category,
-            severity,
-            scopePattern,
-            content,
-            sourceType: 'manual',
-          }),
-        });
-      }
+      const res = await fetch('/api/rules', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          repositoryId,
+          markdownContent: markdown.trim(),
+        }),
+      });
 
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error || 'Failed to upload rule');
+        throw new Error(data.error || 'Failed to save security instructions');
       }
 
-      setSuccessMessage(`Successfully vectorized and stored rule! Chunks indexed into pgvector: ${data.chunksIndexed}`);
-      setTitle('');
-      setContent('');
-      setFile(null);
+      setNotification({
+        type: 'success',
+        message: `Security spec saved! ${data.chunksIndexed} semantic rules indexed for PR reviews.`,
+      });
+      setLastUpdated(data.lastUpdated || new Date().toISOString());
+
       if (onRuleAdded) onRuleAdded();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Upload failed';
-      setErrorMessage(msg);
+      const msg = err instanceof Error ? err.message : 'Save error';
+      setNotification({ type: 'error', message: msg });
     } finally {
-      setIsUploading(false);
+      setIsSaving(false);
     }
   };
 
+  const insertSnippet = (snippet: string) => {
+    setMarkdown((prev) => prev.trim() + '\n' + snippet);
+  };
+
   return (
-    <div className="bg-[#0c121d] border border-[#182335] rounded-xl p-6 shadow-xl">
-      <div className="flex items-center justify-between pb-4 border-b border-[#182335]">
+    <div className="bg-[#0c1220] border border-[#1b2436] rounded-xl overflow-hidden shadow-2xl font-sans">
+      {/* Header */}
+      <div className="px-5 py-3.5 bg-[#090e1a] border-b border-[#1b2436] flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">
-          <BookOpen className="w-5 h-5 text-blue-400" />
-          <h2 className="text-sm font-bold text-[#f0f4fc]">Team Rule & Policy Studio</h2>
-        </div>
-        <span className="text-[11px] font-mono text-[#5e7394]">pgvector (Gemini 768-dim)</span>
-      </div>
-
-      <p className="text-xs text-[#94a7c6] mt-3 mb-6 leading-relaxed">
-        Upload architectural RFCs, coding conventions, or compliance policies (Markdown/PDF).
-        CodeGuard AI chunks sections with LangChain and indexes them with Gemini embeddings to enforce during PR reviews.
-      </p>
-
-      {/* Quick Policy Presets */}
-      <div className="mb-6">
-        <label className="block text-[11px] font-mono uppercase tracking-wider text-[#5e7394] mb-2">
-          Or Load Industry Standards / Team Presets:
-        </label>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
-          {RULE_PRESETS.map((preset) => (
-            <button
-              key={preset.title}
-              type="button"
-              onClick={() => handleSelectPreset(preset)}
-              className="p-3 text-left rounded-lg bg-[#070a10] border border-[#182335] hover:border-[#22324b] text-xs transition-colors"
-            >
-              <div className="font-semibold text-[#f0f4fc] truncate">{preset.title}</div>
-              <div className="text-[10px] font-mono text-[#5e7394] mt-1 capitalize">
-                {preset.category} • {preset.severity}
-              </div>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {successMessage && (
-        <div className="mb-4 p-3 rounded bg-[#062316] border border-[#0b3d27] text-xs text-[#34d399] flex items-center gap-2 font-mono">
-          <CheckCircle2 className="w-4 h-4 shrink-0" />
-          <span>{successMessage}</span>
-        </div>
-      )}
-
-      {errorMessage && (
-        <div className="mb-4 p-3 rounded bg-[#2b0b0e] border border-red-900/60 text-xs text-red-300 flex items-center gap-2 font-mono">
-          <AlertCircle className="w-4 h-4 shrink-0" />
-          <span>{errorMessage}</span>
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs font-semibold text-[#f0f4fc] mb-1">Rule / Guideline Title</label>
-            <input
-              type="text"
-              required
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. RFC-104: Zero-Secret Ingestion Policy"
-              className="w-full bg-[#070a10] border border-[#182335] rounded-md px-3 py-2 text-xs text-[#f0f4fc] focus:outline-none focus:border-[#2563eb]"
-            />
+          <div className="w-7 h-7 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
+            <ShieldCheck className="w-4 h-4" />
           </div>
-
           <div>
-            <label className="block text-xs font-semibold text-[#f0f4fc] mb-1">Scope Pattern</label>
-            <input
-              type="text"
-              value={scopePattern}
-              onChange={(e) => setScopePattern(e.target.value)}
-              placeholder="e.g. src/auth/**, api/**/*.ts, **/*"
-              className="w-full bg-[#070a10] border border-[#182335] rounded-md px-3 py-2 text-xs text-[#f0f4fc] font-mono focus:outline-none focus:border-[#2563eb]"
-            />
+            <h3 className="text-xs font-bold text-white tracking-tight">
+              Security Spec & Review Instructions
+            </h3>
+            <p className="text-[11px] text-slate-400">
+              Define custom architecture rules and security policies in Markdown. Enforced on every PR.
+            </p>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs font-semibold text-[#f0f4fc] mb-1">Category</label>
-            <select
-              value={category}
-              onChange={(e) => setCategory(e.target.value as any)}
-              className="w-full bg-[#070a10] border border-[#182335] rounded-md px-3 py-2 text-xs text-[#f0f4fc] focus:outline-none focus:border-[#2563eb]"
-            >
-              <option value="security">Security</option>
-              <option value="architecture">Architecture</option>
-              <option value="performance">Performance</option>
-              <option value="style">Style & Conventions</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-[#f0f4fc] mb-1">Default Severity</label>
-            <select
-              value={severity}
-              onChange={(e) => setSeverity(e.target.value as any)}
-              className="w-full bg-[#070a10] border border-[#182335] rounded-md px-3 py-2 text-xs text-[#f0f4fc] focus:outline-none focus:border-[#2563eb]"
-            >
-              <option value="critical">Critical (Blocks PR Merge)</option>
-              <option value="high">High (Requires Reviewer Sign-off)</option>
-              <option value="medium">Medium (Advisory Warning)</option>
-              <option value="low">Low (Nit / Suggestion)</option>
-            </select>
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-xs font-semibold text-[#f0f4fc] mb-1">Upload File (Markdown / PDF)</label>
-          <input
-            type="file"
-            accept=".md,.markdown,.txt,.pdf"
-            onChange={handleFileChange}
-            className="w-full bg-[#070a10] border border-[#182335] rounded-md px-3 py-2 text-xs text-[#94a7c6] file:mr-3 file:py-1 file:px-2.5 file:rounded file:border-0 file:text-xs file:bg-[#162237] file:text-[#f0f4fc] hover:file:bg-[#22324b] cursor-pointer"
-          />
-        </div>
-
-        {!file && (
-          <div>
-            <label className="block text-xs font-semibold text-[#f0f4fc] mb-1">Or Paste Guideline Content Directly</label>
-            <textarea
-              rows={5}
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              placeholder="### Password Hashing Policy&#10;All passwords must use Argon2id with 64MB memory cost..."
-              className="w-full bg-[#070a10] border border-[#182335] rounded-md p-3 text-xs font-mono text-[#f0f4fc] focus:outline-none focus:border-[#2563eb]"
-            />
-          </div>
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="text-xs font-mono text-slate-400 hover:text-white transition-colors"
+          >
+            Close [✕]
+          </button>
         )}
+      </div>
 
-        <button
-          type="submit"
-          disabled={isUploading || (!file && !content.trim())}
-          className="flex items-center gap-2 px-4 py-2 bg-[#2563eb] hover:bg-[#1d4ed8] disabled:opacity-50 text-white rounded-md text-xs font-semibold transition-colors shadow-sm"
+      {/* Notification Banner */}
+      {notification && (
+        <div
+          className={`px-5 py-2 text-xs flex items-center justify-between border-b ${
+            notification.type === 'success'
+              ? 'bg-emerald-950/30 text-emerald-300 border-emerald-900/40'
+              : 'bg-rose-950/30 text-rose-300 border-rose-900/40'
+          }`}
         >
-          {isUploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileText className="w-3.5 h-3.5" />}
-          {isUploading ? 'Chunking & Vectorizing in pgvector...' : 'Upload & Vectorize Rule'}
-        </button>
-      </form>
+          <div className="flex items-center gap-2">
+            {notification.type === 'success' ? (
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+            ) : (
+              <AlertCircle className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+            )}
+            <span>{notification.message}</span>
+          </div>
+          <button
+            onClick={() => setNotification(null)}
+            className="text-[10px] uppercase font-mono text-slate-400 hover:text-white"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
+      {/* Main Spec Editor Area */}
+      <div className="p-5 space-y-3">
+        {/* Template Presets Bar */}
+        <div className="flex flex-wrap items-center justify-between gap-2 pb-1">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-[11px] font-mono text-slate-400 mr-1">Insert Template:</span>
+            {TEMPLATE_PRESETS.map((preset) => (
+              <button
+                key={preset.name}
+                type="button"
+                onClick={() => insertSnippet(preset.snippet)}
+                className="px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-blue-500/10 hover:bg-blue-500/20 text-blue-300 border border-blue-500/20 transition-colors"
+              >
+                {preset.name}
+              </button>
+            ))}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setMarkdown('')}
+            className="flex items-center gap-1 text-[11px] font-mono text-slate-500 hover:text-slate-300 transition-colors"
+          >
+            <RotateCcw className="w-3 h-3" />
+            Clear
+          </button>
+        </div>
+
+        {/* Markdown Textarea */}
+        <div className="relative">
+          {isLoading ? (
+            <div className="h-64 flex flex-col items-center justify-center text-slate-400 text-xs gap-2 bg-[#070b13] border border-[#1b2436] rounded-xl">
+              <Loader2 className="w-5 h-5 animate-spin text-blue-400" />
+              <span>Loading repository security spec...</span>
+            </div>
+          ) : (
+            <textarea
+              rows={12}
+              value={markdown}
+              onChange={(e) => setMarkdown(e.target.value)}
+              placeholder="# Enter custom security rules and architectural guidelines in Markdown..."
+              className="w-full bg-[#070b13] border border-[#1b2436] focus:border-blue-500/80 rounded-xl p-4 text-xs font-mono text-slate-100 placeholder-slate-600 focus:outline-none resize-y leading-relaxed"
+            />
+          )}
+        </div>
+
+        {/* Footer Actions */}
+        <div className="pt-2 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2 text-[11px] font-mono text-slate-400">
+            <span className="flex items-center gap-1.5 text-emerald-400">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              Active in PR Reviews
+            </span>
+            {lastUpdated && (
+              <>
+                <span>•</span>
+                <span>Last updated: {new Date(lastUpdated).toLocaleDateString()}</span>
+              </>
+            )}
+          </div>
+
+          <button
+            onClick={handleSave}
+            disabled={isSaving || isLoading || !markdown.trim()}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white text-xs font-semibold transition-all shadow-md"
+          >
+            {isSaving ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <Sparkles className="w-3.5 h-3.5" />
+            )}
+            <span>{isSaving ? 'Indexing Security Spec...' : 'Save Security Spec'}</span>
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

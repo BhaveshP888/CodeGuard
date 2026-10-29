@@ -217,10 +217,10 @@ export default function DashboardPage() {
                         setSelectedRepoId(repo.dbId);
                         setShowRuleStudio(true);
                       }}
-                      className="flex items-center gap-1 text-xs text-[#60a5fa] hover:text-[#93c5fd] font-medium transition-colors"
+                      className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 font-medium transition-colors"
                     >
-                      <BookOpen className="w-3.5 h-3.5" />
-                      Rule Studio
+                      <ShieldCheck className="w-3.5 h-3.5" />
+                      Security Spec
                     </button>
 
                     <button
@@ -343,19 +343,14 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Rule Studio Drawer */}
+        {/* Repository Security Spec Box */}
         {showRuleStudio && selectedRepoId && (
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-mono text-[#94a7c6]">Guideline Ingestion Console</span>
-              <button
-                onClick={() => setShowRuleStudio(false)}
-                className="text-xs text-[#94a7c6] hover:text-white font-mono"
-              >
-                Close Studio [x]
-              </button>
-            </div>
-            <RuleStudio repositoryId={selectedRepoId} onRuleAdded={() => refetch()} />
+          <div className="mb-6">
+            <RuleStudio
+              repositoryId={selectedRepoId}
+              onRuleAdded={() => refetch()}
+              onClose={() => setShowRuleStudio(false)}
+            />
           </div>
         )}
 

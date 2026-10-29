@@ -43,6 +43,12 @@ export const ReviewFindingSchema = z.object({
 export const ReviewReportSchema = z.object({
   summary: z.string().describe('Executive summary of the pull request changes and architectural compliance'),
   riskScore: z.number().int().min(0).max(100).describe('Overall risk score (0 = pristine, 100 = critical threat)'),
+  sequenceDiagram: z
+    .string()
+    .optional()
+    .describe(
+      'A valid Mermaid.js sequenceDiagram showing the architectural interaction flow of the touched components/APIs/database (e.g. starting with "sequenceDiagram\\nautonumber\\n..."). Keep node names alphanumeric without special characters or quotes.'
+    ),
   findings: z.array(ReviewFindingSchema),
 });
 

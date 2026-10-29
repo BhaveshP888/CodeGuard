@@ -153,6 +153,7 @@ export const pullRequestReviews = pgTable(
     status: text('status').default('analyzing').notNull(), // 'analyzing' | 'completed' | 'failed'
     summary: text('summary'),
     riskScore: integer('risk_score'), // 0 - 100
+    sequenceDiagram: text('sequence_diagram'),
     createdAt: timestamp('created_at').defaultNow().notNull(),
   },
   (table) => [
