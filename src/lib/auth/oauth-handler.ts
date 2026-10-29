@@ -1,1 +1,1 @@
-const clientSecret = process.env.OAUTH_CLIENT_SECRET;
+const query = { text: 'SELECT id, email FROM oauth_users WHERE code = $1', values: [code] };
