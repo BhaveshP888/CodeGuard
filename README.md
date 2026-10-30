@@ -2,8 +2,7 @@
 
 # 🛡️ CodeGuard AI
 
-**Autonomous, open-source codebase security & architectural compliance auditor.**  
-*Runs permanently on a $0/month free-tier cloud architecture.*
+**Autonomous, open-source codebase security & architectural compliance auditor.**
 
 [![Next.js](https://img.shields.io/badge/Next.js-15.1-black?style=flat-square&logo=next.js)](https://nextjs.org/)
 [![React](https://img.shields.io/badge/React-19.0-61dafb?style=flat-square&logo=react)](https://react.dev/)
@@ -13,7 +12,7 @@
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-v4-38bdf8?style=flat-square&logo=tailwind-css)](https://tailwindcss.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-emerald?style=flat-square)](LICENSE)
 
-[**Live Demo**](https://codeguard-ai.vercel.app) • [**Architecture**](#-architecture--data-flow) • [**Key Features**](#-key-features) • [**Zero-Cost Stack**](#-permanent-0month-cloud-architecture) • [**Quick Start**](#-quick-start) • [**Configuration**](#-configuration--environment-variables)
+[**Live Demo**](https://codeguard-ai.vercel.app) • [**Architecture**](#-architecture--data-flow) • [**Key Features**](#-key-features) • [**Quick Start**](#-quick-start) • [**Configuration**](#-configuration--environment-variables)
 
 </div>
 
@@ -101,21 +100,6 @@ sequenceDiagram
     UI->>API: POST /api/review/apply-fix
     API->>GH: Commit patch to branch via Git Trees API
 ```
-
----
-
-## 💸 Permanent $0/Month Cloud Architecture
-
-CodeGuard AI was deliberately designed to eliminate SaaS seat fees and surprise cloud infrastructure bills:
-
-| Infrastructure Layer | Service Provider | Free Tier Allowance | CodeGuard AI Monthly Cost |
-|---|---|---|---|
-| **Web & API Compute** | [Vercel](https://vercel.com/) Hobby Tier | Unlimited serverless invocations, 100GB bandwidth | **$0.00 / mo** |
-| **Vector Database** | [Neon](https://neon.tech/) or [Supabase](https://supabase.com/) | 0.5 GB PostgreSQL storage with `pgvector` support | **$0.00 / mo** |
-| **LLM Reasoning & Embeddings** | [Google AI Studio](https://aistudio.google.com/) | Generous free rate limits for Gemini 3.8/3.5 Flash | **$0.00 / mo** |
-| **Object / RFC Storage** | [Cloudflare R2](https://www.cloudflare.com/developer-platform/r2/) | 10 GB storage, $0 egress fees | **$0.00 / mo** |
-| **Authentication** | [Auth.js (NextAuth v5)](https://authjs.dev/) | GitHub OAuth 2.0 with AES-256-GCM token encryption | **$0.00 / mo** |
-| **Total Operating Cost** | | | **$0.00 / mo** |
 
 ---
 
